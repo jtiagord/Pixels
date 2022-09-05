@@ -1,17 +1,12 @@
 import React, { useEffect, useRef, useState } from "react"
-import { createJsxText } from "typescript"
+import ControlButtons from "./ControlButtons";
+import { Line,Position } from "./dataModel/canvasDataModel";
+import { mouseToWorldPosition } from "./utils/canvasUtil";
 
-
-interface Line{
-    x1 : number
-    y1 : number 
-    x2 : number
-    y2 : number 
-}
-
-interface Position{
-    x : number
-    y : number
+const props = { 
+    style : {borderStyle : "solid"},
+    width : 1000,
+    height : 1000
 }
 
 function Pixels(){
@@ -22,23 +17,18 @@ function Pixels(){
     const [lines, setLines] = useState<Array<Line>>([]);
     const [currentLine , setCurrentLine] = useState <Line>();
     const [scale , setScale] = useState <number>(1);
-    const [position, setCanvasPosition] = useState <Position>({x : 0, y : 0});
-
-
-    const [mouseStartPosition, setMouseStartPosition] = useState <Position>();
+    const [position, setCanvasPosition] = useState <Position>({x : 0 ,y : 0 });
 
     const startLine =  (ev : React.MouseEvent<HTMLCanvasElement>) =>{
         let canvas = canvasRef.current
         if(ev.ctrlKey) return
         if(!canvas) return
         if(currentLine){addLine(); return;}
-        let bounds = canvas.getBoundingClientRect();
-        let x = (ev.clientX-bounds.left)/scale - position.x 
-        let y = (ev.clientY-bounds.top)/scale - position.y
-
-        setMouseStartPosition({x,y})
+        let { x,y } = mouseToWorldPosition(ev,canvas, position, scale)
         setCurrentLine({x1 : x, y1: y, x2: x, y2 :y})
     }
+
+  
 
     const changeCurrentLine =  (ev : React.MouseEvent<HTMLCanvasElement>) =>{
         ev.preventDefault();
@@ -46,15 +36,9 @@ function Pixels(){
         let canvas = canvasRef.current
         if(!canvas) return
         if(!currentLine) return
-        let bounds = canvas.getBoundingClientRect();
-        let x = (ev.clientX-bounds.left)/scale - position.x 
-        let y = (ev.clientY-bounds.top)/scale - position.y
-        console.log(ev.buttons + "-" + ev.ctrlKey)
-        if(ev.ctrlKey && ev.buttons === 1 && mouseStartPosition){
-            setCanvasPosition((position)=>{
-                return { x : position.x + 1, y : position.y + 1 }
-            })
-        }
+        
+        let { x,y } = mouseToWorldPosition(ev,canvas, position, scale)
+        
         setCurrentLine({x1 : currentLine!.x1, y1 : currentLine!.y1 , x2  : x,  y2 : y})
     }
 
@@ -63,7 +47,6 @@ function Pixels(){
         if(!canvas || !currentLine) return
 
         setLines(lines.concat(currentLine))
-        setMouseStartPosition(undefined)
         setCurrentLine(undefined)
     }
 
@@ -73,8 +56,6 @@ function Pixels(){
         if(!canvas) return
         ev.preventDefault()
 
-       
-       
         setScale((scale)=>{
             let newScale = scale * (ev.deltaY < 0 ? 1.1: 0.90)
             if(newScale < 1) newScale =  1
@@ -120,9 +101,14 @@ function Pixels(){
         ctx.restore()
     }, [lines,currentLine,scale,position.x,position.y])
 
-    return <canvas style = {{borderStyle : "solid"}} onMouseDown= {startLine} onMouseMove = {changeCurrentLine} onMouseUp={addLine} 
-    ref={canvasRef} width={1000} 
-     height = {1000}/>
+    return <div>
+         <ControlButtons></ControlButtons>
+         <p/>
+         <canvas style = {props.style} onMouseDown= {startLine} onMouseMove = {changeCurrentLine} onMouseUp={addLine} 
+        ref={canvasRef} height = {props.height} width = {props.width} />
+ 
+       
+        </div>
 }
 
 
