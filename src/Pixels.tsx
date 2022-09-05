@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import ControlButtons from "./ControlButtons";
-import { Line,Position } from "./dataModel/canvasDataModel";
+import { Circle,Line,Position, Shape} from "./dataModel/canvasDataModel";
+
 import { mouseToWorldPosition } from "./utils/canvasUtil";
 
 const props = { 
@@ -14,40 +15,40 @@ function Pixels(){
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     //canvas related states
-    const [lines, setLines] = useState<Array<Line>>([]);
-    const [currentLine , setCurrentLine] = useState <Line>();
+    const [lines, setLines] = useState<Array<Shape>>([]);
+    const [currentShape , setCurrentShape] = useState <Shape>();
     const [scale , setScale] = useState <number>(1);
     const [position, setCanvasPosition] = useState <Position>({x : 0 ,y : 0 });
 
     const startLine =  (ev : React.MouseEvent<HTMLCanvasElement>) =>{
         let canvas = canvasRef.current
-        if(ev.ctrlKey) return
         if(!canvas) return
-        if(currentLine){addLine(); return;}
+        if(currentShape){addShape(); return;} //exception when u leave the mouse from the canvas
+
         let { x,y } = mouseToWorldPosition(ev,canvas, position, scale)
-        setCurrentLine({x1 : x, y1: y, x2: x, y2 :y})
+        setCurrentShape(new Line(x,y,x,y))
     }
 
   
 
-    const changeCurrentLine =  (ev : React.MouseEvent<HTMLCanvasElement>) =>{
+    const changeCurrentShape =  (ev : React.MouseEvent<HTMLCanvasElement>) =>{
         ev.preventDefault();
 
         let canvas = canvasRef.current
         if(!canvas) return
-        if(!currentLine) return
+        if(!currentShape) return
         
         let { x,y } = mouseToWorldPosition(ev,canvas, position, scale)
         
-        setCurrentLine({x1 : currentLine!.x1, y1 : currentLine!.y1 , x2  : x,  y2 : y})
+        setCurrentShape(currentShape.moveEndPoint(x,y))
     }
 
-    const addLine = () =>{
+    const addShape = () =>{
         let canvas = canvasRef.current
-        if(!canvas || !currentLine) return
+        if(!canvas || !currentShape) return
 
-        setLines(lines.concat(currentLine))
-        setCurrentLine(undefined)
+        setLines(lines.concat(currentShape))
+        setCurrentShape(undefined)
     }
 
 
@@ -73,6 +74,7 @@ function Pixels(){
     }, [canvasRef])
 
     useEffect(() =>{
+        console.log("1")
         let canvas = canvasRef.current
         var ctx = canvas?.getContext("2d");
         if(!ctx || !canvas) return;
@@ -85,29 +87,20 @@ function Pixels(){
         ctx.strokeRect(0,0,canvas.width,canvas.height)
         
         
-        if(currentLine){
-            ctx?.beginPath();
-            ctx?.moveTo(currentLine.x1, currentLine.y1);
-            ctx?.lineTo(currentLine.x2, currentLine.y2);
-            ctx?.stroke();
-        }
+        currentShape?.draw(ctx)
 
-        lines.forEach(currentLine => {
-            ctx?.beginPath();
-            ctx?.moveTo(currentLine.x1, currentLine.y1);
-            ctx?.lineTo(currentLine.x2, currentLine.y2);
-            ctx?.stroke();
+        lines.forEach(line => {
+            line.draw(ctx!)
         });
+
         ctx.restore()
-    }, [lines,currentLine,scale,position.x,position.y])
+    }, [lines,currentShape,scale,position.x,position.y])
 
     return <div>
-         <ControlButtons></ControlButtons>
-         <p/>
-         <canvas style = {props.style} onMouseDown= {startLine} onMouseMove = {changeCurrentLine} onMouseUp={addLine} 
-        ref={canvasRef} height = {props.height} width = {props.width} />
- 
-       
+            <ControlButtons></ControlButtons>
+            <p/>
+         <canvas style = {props.style} onMouseDown= {startLine} onMouseMove = {changeCurrentShape} onMouseUp={addShape} 
+                ref={canvasRef} height = {props.height} width = {props.width} />
         </div>
 }
 
